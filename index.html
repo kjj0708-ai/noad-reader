@@ -322,9 +322,10 @@ const EXAMPLES = [
 ];
 
 const PROXIES = [
-  (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-  (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-  (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+  { url: (u) => `https://r.jina.ai/${u}`, headers: { "X-Return-Format": "html" }, timeout: 30000 },
+  { url: (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`, timeout: 15000 },
+  { url: (u) => `https://corsproxy.io/?${encodeURIComponent(u)}`, timeout: 15000 },
+  { url: (u) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`, timeout: 15000 },
 ];
 
 const RECENT_KEY = "noad_reader_recent";
@@ -384,8 +385,8 @@ function renderWelcome() {
   });
 }
 
-async function fetchVia(proxyFn, url, signal) {
-  const res = await fetch(proxyFn(url), { signal });
+async function fetchVia(proxy, url, signal) {
+  const res = await fetch(proxy.url(url), { signal, headers: proxy.headers || {} });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return await res.text();
 }
@@ -395,7 +396,7 @@ async function fetchHtml(url) {
   for (const proxy of PROXIES) {
     try {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 15000);
+      const timer = setTimeout(() => controller.abort(), proxy.timeout || 15000);
       const html = await fetchVia(proxy, url, controller.signal);
       clearTimeout(timer);
       if (html && html.length > 200) return html;
